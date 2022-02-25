@@ -138,4 +138,7 @@
   "<(SHARED_INTERMEDIATE_DIR)/brave/browser/resources/sidebar/sidebar_resources.grd": {
     "includes": [51500]
   },
+  "<(SHARED_INTERMEDIATE_DIR)/brave/browser/resources/federated_internals/federated_internals_resources.grd": {
+    "includes": [51750]
+  },
 }
