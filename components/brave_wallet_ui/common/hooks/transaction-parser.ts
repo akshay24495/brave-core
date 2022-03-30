@@ -86,7 +86,7 @@ export function useTransactionFeesParser (selectedNetwork: BraveWallet.NetworkIn
   }, [])
 
   return React.useCallback((transactionInfo: BraveWallet.TransactionInfo): ParsedTransactionFees => {
-    const { txDataUnion: { ethTxData1559: txData } } = transactionInfo
+    const { txDataUnion: { ethTxData1559: txData }, txType } = transactionInfo
     const gasLimit = txData?.baseData.gasLimit || ''
     const gasPrice = txData?.baseData.gasPrice || ''
     const maxFeePerGas = txData?.maxFeePerGas || ''
@@ -111,7 +111,7 @@ export function useTransactionFeesParser (selectedNetwork: BraveWallet.NetworkIn
         .times(networkSpotPrice)
         .formatAsFiat(),
       isEIP1559Transaction,
-      missingGasLimitError: checkForMissingGasLimitError(gasLimit)
+      missingGasLimitError: txType === BraveWallet.TransactionType.SolanaSystemTransfer ? undefined : checkForMissingGasLimitError(gasLimit)
     }
   }, [selectedNetwork, networkSpotPrice])
 }
@@ -186,9 +186,10 @@ export function useTransactionParser (
   }
 
   return React.useCallback((transactionInfo: BraveWallet.TransactionInfo) => {
-    const { txArgs, txDataUnion: { ethTxData1559: txData }, fromAddress, txType } = transactionInfo
-    const value = txData?.baseData.value || ''
-    const to = txData?.baseData.to || ''
+    const { txArgs, txDataUnion: { ethTxData1559: txData, solanaTxData: solTxData }, fromAddress, txType } = transactionInfo
+    const isSOL = txType === BraveWallet.TransactionType.SolanaSystemTransfer
+    const value = isSOL ? solTxData?.lamports.toString() ?? '' : txData?.baseData.value || ''
+    const to = isSOL ? solTxData?.toWalletAddress ?? '' : txData?.baseData.to || ''
     const nonce = txData?.baseData.nonce || ''
     const account = accounts.find((account) => account.address.toLowerCase() === fromAddress.toLowerCase())
     const token = findToken(to)
@@ -330,6 +331,7 @@ export function useTransactionParser (
       // FIXME: swap needs a real parser to figure out the From and To details.
       case to.toLowerCase() === SwapExchangeProxy:
       case txType === BraveWallet.TransactionType.ETHSend:
+      case txType === BraveWallet.TransactionType.SolanaSystemTransfer:
       case txType === BraveWallet.TransactionType.Other:
       default: {
         const sendAmountFiat = computeFiatAmount(value, selectedNetwork.symbol, selectedNetwork.decimals)

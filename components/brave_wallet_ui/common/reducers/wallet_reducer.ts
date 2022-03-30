@@ -81,7 +81,7 @@ const defaultState: WalletState = {
   gasEstimates: undefined,
   connectedAccounts: [],
   isMetaMaskInstalled: false,
-  selectedCoin: BraveWallet.CoinType.ETH,
+  selectedCoin: BraveWallet.CoinType.SOL,
   defaultCurrencies: {
     fiat: '',
     crypto: ''

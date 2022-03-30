@@ -26,7 +26,8 @@ import {
   WalletInfo,
   TransactionProviderError,
   SupportedCoinTypes,
-  SendFilTransactionParams
+  SendFilTransactionParams,
+  SendSolTransactionParams
 } from '../../constants/types'
 
 // Utils
@@ -43,7 +44,8 @@ import {
   refreshVisibleTokenInfo,
   refreshPrices,
   sendEthTransaction,
-  sendFilTransaction
+  sendFilTransaction,
+  sendSolTransaction
 } from './lib'
 import { Store } from './types'
 import InteractionNotifier from './interactionNotifier'
@@ -85,7 +87,7 @@ async function refreshWalletInfo (store: Store) {
       BraveWallet.ExternalWalletType.MetaMask)
   store.dispatch(WalletActions.setMetaMaskInstalled(mmResult.installed))
 
-  await store.dispatch(refreshTransactionHistory(BraveWallet.CoinType.ETH))
+  await store.dispatch(refreshTransactionHistory(BraveWallet.CoinType.SOL))
   await store.dispatch(refreshSitePermissions())
 }
 
@@ -247,7 +249,7 @@ handler.on(WalletActions.initialized.getType(), async (store: Store, payload: Wa
 
   // This can be 0 when the wallet is locked
   if (payload.selectedAccount) {
-    await store.dispatch(refreshTransactionHistory(BraveWallet.CoinType.ETH, payload.selectedAccount))
+    await store.dispatch(refreshTransactionHistory(state.selectedCoin, payload.selectedAccount))
   }
 })
 
@@ -305,12 +307,14 @@ handler.on(WalletActions.selectPortfolioTimeline.getType(), async (store: Store,
   await store.dispatch(refreshTokenPriceHistory(payload))
 })
 
-handler.on(WalletActions.sendTransaction.getType(), async (store: Store, payload: SendEthTransactionParams | SendFilTransactionParams) => {
+handler.on(WalletActions.sendTransaction.getType(), async (store: Store, payload: SendEthTransactionParams | SendFilTransactionParams | SendSolTransactionParams) => {
   let addResult
   if (payload.coin === BraveWallet.CoinType.ETH) {
     addResult = await sendEthTransaction(store, payload as SendEthTransactionParams)
   } else if (payload.coin === BraveWallet.CoinType.FIL) {
     addResult = await sendFilTransaction(payload as SendFilTransactionParams)
+  } else if (payload.coin === BraveWallet.CoinType.SOL) {
+    addResult = await sendSolTransaction(payload as SendSolTransactionParams)
   }
   if (addResult && !addResult.success) {
     console.log(

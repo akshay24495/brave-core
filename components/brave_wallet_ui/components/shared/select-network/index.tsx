@@ -18,7 +18,7 @@ function SelectNetwork (props: Props) {
   const networkList = React.useMemo(() => {
     return networks.filter(
       (network) =>
-        network.coin !== BraveWallet.CoinType.SOL &&
+        // network.coin !== BraveWallet.CoinType.SOL &&
         network.coin !== BraveWallet.CoinType.FIL
     )
   }, [networks])

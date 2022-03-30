@@ -394,11 +394,14 @@ export interface SendFilTransactionParams extends BaseTransactionParams {
   cid?: string
 }
 
+export interface SendSolTransactionParams extends BaseTransactionParams {
+}
+
 export interface SendEthTransactionParams extends BaseEthTransactionParams {
   data?: number[]
 }
 
-export type SendTransactionParams = SendEthTransactionParams | SendFilTransactionParams
+export type SendTransactionParams = SendEthTransactionParams | SendFilTransactionParams | SendSolTransactionParams
 
 export interface ER20TransferParams extends BaseEthTransactionParams {
   contractAddress: string
