@@ -32,6 +32,7 @@ export interface Props {
   accounts: WalletAccountType[]
   selectedNetwork: BraveWallet.NetworkInfo
   encryptionKeyPayload: BraveWallet.GetEncryptionPublicKeyRequest
+  decryptPayload: BraveWallet.DecryptRequest
   onProvideOrAllow: () => void
   onCancel: () => void
 }
@@ -42,18 +43,19 @@ function EncryptionKeyPanel (props: Props) {
     accounts,
     selectedNetwork,
     encryptionKeyPayload,
+    decryptPayload,
     onProvideOrAllow,
     onCancel
   } = props
   const [isDecrypted, setIsDecrypted] = React.useState<boolean>(false)
 
   const foundAccountName = React.useMemo(() => {
-    return accounts.find((account) => account.address.toLowerCase() === encryptionKeyPayload.address.toLowerCase())?.name
-  }, [encryptionKeyPayload])
+    return accounts.find((account) => account.address.toLowerCase() === (encryptionKeyPayload || decryptPayload).address.toLowerCase())?.name
+  }, [encryptionKeyPayload, decryptPayload])
 
   const orb = React.useMemo(() => {
-    return create({ seed: encryptionKeyPayload.address.toLowerCase(), size: 8, scale: 16 }).toDataURL()
-  }, [encryptionKeyPayload])
+    return create({ seed: (encryptionKeyPayload || decryptPayload).address.toLowerCase(), size: 8, scale: 16 }).toDataURL()
+  }, [encryptionKeyPayload, decryptPayload])
 
   const onDecryptMessage = () => {
     setIsDecrypted(true)
@@ -69,7 +71,7 @@ function EncryptionKeyPanel (props: Props) {
       <PanelTitle>
         {panelType === 'request'
           ? getLocale('braveWalletProvideEncryptionKeyTitle')
-          : getLocale('braveWalletReadEncryptedMessageTitle').replace('$1', encryptionKeyPayload.origin.url)}
+          : getLocale('braveWalletReadEncryptedMessageTitle').replace('$1', (encryptionKeyPayload || decryptPayload).origin.url)}
       </PanelTitle>
       <TabRow>
         <PanelTab
@@ -89,8 +91,8 @@ function EncryptionKeyPanel (props: Props) {
         ) : (
           <MessageText>
             {panelType === 'request'
-              ? getLocale('braveWalletProvideEncryptionKeyDescription').replace('$1', encryptionKeyPayload.origin.url)
-              : encryptionKeyPayload.message}
+              ? getLocale('braveWalletProvideEncryptionKeyDescription').replace('$1', (encryptionKeyPayload || decryptPayload).origin.url)
+              : decryptPayload.message}
           </MessageText>
         )}
       </MessageBox>

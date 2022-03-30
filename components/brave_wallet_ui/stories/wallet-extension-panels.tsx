@@ -333,6 +333,13 @@ _SignData.story = {
 
 const encryptionKeyMockPayload = {
   address: '0x3f29A1da97149722eB09c526E4eAd698895b426',
+  origin: {
+    url: 'https://app.skiff.org'
+  }
+}
+
+const decryptMockPayload = {
+  address: '0x3f29A1da97149722eB09c526E4eAd698895b426',
   message: 'This is a test message.',
   origin: {
     url: 'https://app.skiff.org'
@@ -353,6 +360,7 @@ export const _ProvideEncryptionKey = () => {
       <EncryptionKeyPanel
         panelType='request'
         encryptionKeyPayload={encryptionKeyMockPayload}
+        decryptPayload={decryptMockPayload}
         accounts={accounts}
         selectedNetwork={mockNetworks[0]}
         onCancel={onCancel}
