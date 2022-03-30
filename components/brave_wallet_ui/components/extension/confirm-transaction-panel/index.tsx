@@ -1,10 +1,10 @@
 import * as React from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { create } from 'ethereum-blockies'
 
 import {
   BraveWallet,
-  WalletAccountType,
-  DefaultCurrencies
+  WalletState
 } from '../../../constants/types'
 import {
   UpdateUnapprovedTransactionGasFieldsType,
@@ -62,6 +62,7 @@ import {
   WarningTitle,
   WarningTitleRow
 } from './style'
+import { Skeleton } from '../../shared/loading-skeleton/styles'
 
 import {
   TabRow,
@@ -74,58 +75,59 @@ import {
 import AdvancedTransactionSettingsButton from '../advanced-transaction-settings/button'
 import AdvancedTransactionSettings from '../advanced-transaction-settings'
 
+import {
+  rejectAllTransactions,
+  queueNextTransaction,
+  refreshGasEstimates,
+  updateUnapprovedTransactionSpendAllowance,
+  updateUnapprovedTransactionGasFields,
+  updateUnapprovedTransactionNonce
+} from '../../../common/actions/wallet_actions'
+
 export type confirmPanelTabs = 'transaction' | 'details'
 
 export interface Props {
   siteURL: string
-  accounts: WalletAccountType[]
-  visibleTokens: BraveWallet.BlockchainToken[]
-  fullTokenList: BraveWallet.BlockchainToken[]
-  transactionInfo: BraveWallet.TransactionInfo
-  selectedNetwork: BraveWallet.NetworkInfo
-  transactionSpotPrices: BraveWallet.AssetPrice[]
-  gasEstimates: BraveWallet.GasEstimation1559 | undefined
-  transactionsQueueLength: number
-  transactionQueueNumber: number
-  defaultCurrencies: DefaultCurrencies
-  onQueueNextTransaction: () => void
   onConfirm: () => void
   onReject: () => void
-  onRejectAllTransactions: () => void
-  refreshGasEstimates: () => void
-  getERC20Allowance: (recipient: string, sender: string, approvalTarget: string) => Promise<string>
-  updateUnapprovedTransactionGasFields: (payload: UpdateUnapprovedTransactionGasFieldsType) => void
-  updateUnapprovedTransactionSpendAllowance: (payload: UpdateUnapprovedTransactionSpendAllowanceType) => void
-  updateUnapprovedTransactionNonce: (payload: UpdateUnapprovedTransactionNonceType) => void
 }
 
-function ConfirmTransactionPanel (props: Props) {
+function ConfirmTransactionPanel ({
+  onConfirm,
+  onReject,
+  siteURL
+}: Props) {
+  // redux
+  const dispatch = useDispatch()
   const {
-    siteURL,
     accounts,
     selectedNetwork,
-    transactionInfo,
-    visibleTokens,
+    selectedPendingTransaction: transactionInfo,
+    userVisibleTokensInfo: visibleTokens,
     transactionSpotPrices,
     gasEstimates,
-    transactionsQueueLength,
-    transactionQueueNumber,
     fullTokenList,
     defaultCurrencies,
-    onQueueNextTransaction,
-    onConfirm,
-    onReject,
-    onRejectAllTransactions,
-    refreshGasEstimates,
-    getERC20Allowance,
-    updateUnapprovedTransactionGasFields,
-    updateUnapprovedTransactionSpendAllowance,
-    updateUnapprovedTransactionNonce
-  } = props
+    pendingTransactions
+  } = useSelector((state: { wallet: WalletState }) => state.wallet)
+  const transactionGasEstimates = transactionInfo?.txDataUnion.ethTxData1559?.gasEstimation
 
-  const transactionGasEstimates = transactionInfo.txDataUnion.ethTxData1559?.gasEstimation
+  // custom hooks
+  const { getBlockchainTokenInfo, getERC20Allowance } = useLib()
+  const parseTransaction = useTransactionParser(
+    selectedNetwork,
+    accounts,
+    transactionSpotPrices,
+    visibleTokens,
+    fullTokenList
+  )
+  const { findAssetPrice } = usePricing(transactionSpotPrices)
+  const {
+    onFindTokenInfoByContractAddress,
+    foundTokenInfoByContractAddress
+  } = useTokenInfo(getBlockchainTokenInfo, visibleTokens, fullTokenList, selectedNetwork)
 
-  const { getBlockchainTokenInfo } = useLib()
+  // state
   const [maxPriorityPanel, setMaxPriorityPanel] = React.useState<MaxPriorityPanels>(MaxPriorityPanels.setSuggested)
   const [suggestedSliderStep, setSuggestedSliderStep] = React.useState<string>('1')
   const [suggestedMaxPriorityFeeChoices, setSuggestedMaxPriorityFeeChoices] = React.useState<string[]>([
@@ -140,21 +142,51 @@ function ConfirmTransactionPanel (props: Props) {
   const [isEditingAllowance, setIsEditingAllowance] = React.useState<boolean>(false)
   const [showAdvancedTransactionSettings, setShowAdvancedTransactionSettings] = React.useState<boolean>(false)
 
-  const { findAssetPrice } = usePricing(transactionSpotPrices)
-  const parseTransaction = useTransactionParser(selectedNetwork, accounts, transactionSpotPrices, visibleTokens, fullTokenList)
-  const transactionDetails = parseTransaction(transactionInfo)
+  // computed state
+  const transactionDetails = transactionInfo ? parseTransaction(transactionInfo) : undefined
+  const transactionQueueNumber = pendingTransactions.findIndex(tx => tx.id === transactionInfo?.id) + 1
+  const transactionsQueueLength = pendingTransactions.length
 
-  const {
-    onFindTokenInfoByContractAddress,
-    foundTokenInfoByContractAddress
-  } = useTokenInfo(getBlockchainTokenInfo, visibleTokens, fullTokenList, selectedNetwork)
+  // memos
+  const fromOrb = React.useMemo(() => {
+    return create({ seed: transactionDetails?.sender.toLowerCase(), size: 8, scale: 16 }).toDataURL()
+  }, [transactionDetails])
 
+  const toOrb = React.useMemo(() => {
+    return create({
+      seed: transactionDetails?.recipient.toLowerCase(),
+      size: 8,
+      scale: 10
+    }).toDataURL()
+  }, [transactionDetails])
+
+  const AssetIconWithPlaceholder = React.useMemo(() => {
+    return withPlaceholderIcon(AssetIcon, { size: 'big', marginLeft: 0, marginRight: 0 })
+  }, [])
+
+  const transactionTitle = React.useMemo(
+    (): string =>
+      transactionDetails?.isSwap
+        ? getLocale('braveWalletSwap')
+        : getLocale('braveWalletSend')
+    , [transactionDetails])
+
+  const isConfirmButtonDisabled = React.useMemo(() => {
+    return (
+      !!transactionDetails?.sameAddressError ||
+      !!transactionDetails?.contractAddressError ||
+      transactionDetails?.insufficientFundsError ||
+      !!transactionDetails?.missingGasLimitError
+    )
+  }, [transactionDetails])
+
+  // effects
   React.useEffect(() => {
     const interval = setInterval(() => {
-      refreshGasEstimates()
+      dispatch(refreshGasEstimates())
     }, 15000)
 
-    refreshGasEstimates()
+    dispatch(refreshGasEstimates())
     return () => clearInterval(interval)
   }, [])
 
@@ -172,11 +204,11 @@ function ConfirmTransactionPanel (props: Props) {
   )
 
   React.useEffect(() => {
-    if (transactionInfo.txType !== BraveWallet.TransactionType.ERC20Approve) {
+    if (transactionInfo?.txType !== BraveWallet.TransactionType.ERC20Approve) {
       return
     }
 
-    if (!transactionDetails.approvalTarget) {
+    if (!transactionDetails?.approvalTarget) {
       return
     }
 
@@ -193,11 +225,15 @@ function ConfirmTransactionPanel (props: Props) {
   }, [])
 
   React.useEffect(() => {
-    if (transactionInfo.txType === BraveWallet.TransactionType.ERC20Approve) {
+    if (
+      transactionDetails &&
+      transactionInfo?.txType === BraveWallet.TransactionType.ERC20Approve
+    ) {
       onFindTokenInfoByContractAddress(transactionDetails.recipient)
     }
   }, [])
 
+  // methods
   const onSelectTab = (tab: confirmPanelTabs) => () => {
     setSelectedTab(tab)
   }
@@ -205,14 +241,6 @@ function ConfirmTransactionPanel (props: Props) {
   const findAccountName = (address: string) => {
     return accounts.find((account) => account.address.toLowerCase() === address.toLowerCase())?.name
   }
-
-  const fromOrb = React.useMemo(() => {
-    return create({ seed: transactionDetails.sender.toLowerCase(), size: 8, scale: 16 }).toDataURL()
-  }, [transactionDetails])
-
-  const toOrb = React.useMemo(() => {
-    return create({ seed: transactionDetails.recipient.toLowerCase(), size: 8, scale: 10 }).toDataURL()
-  }, [transactionDetails])
 
   const onToggleEditGas = () => {
     setIsEditing(!isEditing)
@@ -223,38 +251,43 @@ function ConfirmTransactionPanel (props: Props) {
   }
 
   const onEditAllowanceSave = (allowance: string) => {
-    updateUnapprovedTransactionSpendAllowance({
-      txMetaId: transactionInfo.id,
-      spenderAddress: transactionDetails.approvalTarget || '',
-      allowance: new Amount(allowance)
-        .multiplyByDecimals(transactionDetails.decimals)
-        .toHex()
-    })
+    if (transactionInfo && transactionDetails) {
+      onUpdateUnapprovedTransactionSpendAllowance({
+        txMetaId: transactionInfo.id,
+        spenderAddress: transactionDetails.approvalTarget || '',
+        allowance: new Amount(allowance)
+          .multiplyByDecimals(transactionDetails.decimals)
+          .toHex()
+      })
+    }
   }
 
   const onToggleAdvancedTransactionSettings = () => {
     setShowAdvancedTransactionSettings(!showAdvancedTransactionSettings)
   }
 
-  const AssetIconWithPlaceholder = React.useMemo(() => {
-    return withPlaceholderIcon(AssetIcon, { size: 'big', marginLeft: 0, marginRight: 0 })
-  }, [])
+  const onQueueNextTransaction = () => dispatch(queueNextTransaction())
 
-  const transactionTitle = React.useMemo(
-    (): string =>
-      transactionDetails.isSwap
-        ? getLocale('braveWalletSwap')
-        : getLocale('braveWalletSend')
-    , [transactionDetails])
+  const onRejectAllTransactions = () => dispatch(rejectAllTransactions())
 
-  const isConfirmButtonDisabled = React.useMemo(() => {
-    return (
-      !!transactionDetails.sameAddressError ||
-      !!transactionDetails.contractAddressError ||
-      transactionDetails.insufficientFundsError ||
-      !!transactionDetails.missingGasLimitError
-    )
-  }, [transactionDetails])
+  const onUpdateUnapprovedTransactionSpendAllowance = (args: UpdateUnapprovedTransactionSpendAllowanceType) => {
+    dispatch(updateUnapprovedTransactionSpendAllowance(args))
+  }
+
+  const onUpdateUnapprovedTransactionNonce = (args: UpdateUnapprovedTransactionNonceType) => {
+    dispatch(updateUnapprovedTransactionNonce(args))
+  }
+
+  const onUpdateUnapprovedTransactionGasFields = (payload: UpdateUnapprovedTransactionGasFieldsType) => {
+    dispatch(updateUnapprovedTransactionGasFields(payload))
+  }
+
+  // render
+  if (!transactionDetails || !transactionInfo) {
+    return <StyledWrapper>
+      <Skeleton width={'100%'} height={'100%'} enableAnimation />
+    </StyledWrapper>
+  }
 
   /**
    * This will need updating if we ever switch to using per-locale formatting,
@@ -287,7 +320,7 @@ function ConfirmTransactionPanel (props: Props) {
         selectedNetwork={selectedNetwork}
         baseFeePerGas={baseFeePerGas}
         suggestedMaxPriorityFeeChoices={suggestedMaxPriorityFeeChoices}
-        updateUnapprovedTransactionGasFields={updateUnapprovedTransactionGasFields}
+        updateUnapprovedTransactionGasFields={onUpdateUnapprovedTransactionGasFields}
         suggestedSliderStep={suggestedSliderStep}
         setSuggestedSliderStep={setSuggestedSliderStep}
         maxPriorityPanel={maxPriorityPanel}
@@ -315,7 +348,7 @@ function ConfirmTransactionPanel (props: Props) {
         onCancel={onToggleAdvancedTransactionSettings}
         nonce={transactionDetails.nonce}
         txMetaId={transactionInfo.id}
-        updateUnapprovedTransactionNonce={updateUnapprovedTransactionNonce}
+        updateUnapprovedTransactionNonce={onUpdateUnapprovedTransactionNonce}
       />
     )
   }
@@ -324,7 +357,7 @@ function ConfirmTransactionPanel (props: Props) {
     <StyledWrapper>
       <TopRow>
         <NetworkText>{reduceNetworkDisplayName(selectedNetwork.chainName)}</NetworkText>
-        {transactionInfo.txType === BraveWallet.TransactionType.ERC20Approve &&
+        {transactionInfo?.txType === BraveWallet.TransactionType.ERC20Approve &&
           <AddressAndOrb>
             <AddressText>{reduceAddress(transactionDetails.recipient)}</AddressText>
             <AccountCircle orb={toOrb} />
@@ -332,7 +365,9 @@ function ConfirmTransactionPanel (props: Props) {
         }
         {transactionsQueueLength > 1 &&
           <QueueStepRow>
-            <QueueStepText>{transactionQueueNumber} {getLocale('braveWalletQueueOf')} {transactionsQueueLength}</QueueStepText>
+            <QueueStepText>
+              {transactionQueueNumber} {getLocale('braveWalletQueueOf')} {transactionsQueueLength}
+            </QueueStepText>
             <QueueStepButton
               onClick={onQueueNextTransaction}
             >
@@ -344,6 +379,7 @@ function ConfirmTransactionPanel (props: Props) {
           </QueueStepRow>
         }
       </TopRow>
+
       {transactionInfo.txType === BraveWallet.TransactionType.ERC20Approve ? (
         <>
           <FavIcon src={`chrome://favicon/size/64@1x/${siteURL}`} />
@@ -398,6 +434,7 @@ function ConfirmTransactionPanel (props: Props) {
           }
         </>
       )}
+
       <TabRow>
         <PanelTab
           isSelected={selectedTab === 'transaction'}
@@ -414,6 +451,7 @@ function ConfirmTransactionPanel (props: Props) {
           onSubmit={ onToggleAdvancedTransactionSettings }
         />
       </TabRow>
+
       <MessageBox isDetails={selectedTab === 'details'} isApprove={transactionInfo.txType === BraveWallet.TransactionType.ERC20Approve}>
         {selectedTab === 'transaction' ? (
           <>
@@ -423,6 +461,7 @@ function ConfirmTransactionPanel (props: Props) {
                   <TransactionTitle>{getLocale('braveWalletAllowSpendTransactionFee')}</TransactionTitle>
                   <EditButton onClick={onToggleEditGas}>{getLocale('braveWalletAllowSpendEditButton')}</EditButton>
                 </SectionRow>
+
                 <TransactionTypeText>
                   {
                     new Amount(transactionDetails.gasFee)
@@ -430,6 +469,7 @@ function ConfirmTransactionPanel (props: Props) {
                       .formatAsAsset(6, selectedNetwork.symbol)
                   }
                 </TransactionTypeText>
+
                 <TransactionText
                   hasError={transactionDetails.insufficientFundsError}
                 >
@@ -514,6 +554,7 @@ function ConfirmTransactionPanel (props: Props) {
           </>
         ) : <TransactionDetailBox transactionInfo={transactionInfo} />}
       </MessageBox>
+
       {transactionsQueueLength > 1 &&
         <QueueStepButton
           needsMargin={true}
@@ -522,6 +563,7 @@ function ConfirmTransactionPanel (props: Props) {
           {getLocale('braveWalletQueueRejectAll').replace('$1', transactionsQueueLength.toString())}
         </QueueStepButton>
       }
+
       {transactionDetails.contractAddressError &&
         <ErrorText>
           {transactionDetails.contractAddressError}
