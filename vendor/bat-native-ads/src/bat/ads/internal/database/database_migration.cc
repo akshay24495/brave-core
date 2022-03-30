@@ -26,6 +26,7 @@
 #include "bat/ads/internal/database/tables/creative_promoted_content_ads_database_table.h"
 #include "bat/ads/internal/database/tables/dayparts_database_table.h"
 #include "bat/ads/internal/database/tables/geo_targets_database_table.h"
+#include "bat/ads/internal/database/tables/redemption_values_database_table.h"
 #include "bat/ads/internal/database/tables/segments_database_table.h"
 #include "bat/ads/internal/database/tables/transactions_database_table.h"
 #include "bat/ads/internal/logging.h"
@@ -89,6 +90,9 @@ void Migration::ToVersion(mojom::DBTransaction* transaction,
 
   table::Segments segments_database_table;
   segments_database_table.Migrate(transaction, to_version);
+
+  table::RedemptionValues redemption_values_database_table;
+  redemption_values_database_table.Migrate(transaction, to_version);
 
   table::CreativeAdNotifications creative_ad_notifications_database_table;
   creative_ad_notifications_database_table.Migrate(transaction, to_version);

@@ -140,6 +140,11 @@ class AdsService : public KeyedService {
       const std::string& creative_instance_id,
       const ads::mojom::InlineContentAdEventType event_type) = 0;
 
+  virtual void OnSearchResultAdEvent(
+      const std::string& uuid,
+      ads::mojom::SearchResultAdPtr search_result_ad,
+      const ads::mojom::SearchResultAdEventType event_type) = 0;
+
   virtual void PurgeOrphanedAdEventsForType(
       const ads::mojom::AdType ad_type) = 0;
 

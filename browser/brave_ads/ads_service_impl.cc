@@ -1162,6 +1162,18 @@ void AdsServiceImpl::OnInlineContentAdEvent(
   bat_ads_->OnInlineContentAdEvent(uuid, creative_instance_id, event_type);
 }
 
+void AdsServiceImpl::OnSearchResultAdEvent(
+    const std::string& uuid,
+    ads::mojom::SearchResultAdPtr search_result_ad,
+    const ads::mojom::SearchResultAdEventType event_type) {
+  if (!connected()) {
+    return;
+  }
+
+  bat_ads_->OnSearchResultAdEvent(uuid, std::move(search_result_ad),
+                                  event_type);
+}
+
 void AdsServiceImpl::PurgeOrphanedAdEventsForType(
     const ads::mojom::AdType ad_type) {
   if (!connected()) {

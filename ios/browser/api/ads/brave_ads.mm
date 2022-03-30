@@ -651,6 +651,20 @@ BATClassAdsBridge(BOOL, isDebug, setDebug, g_is_debug)
       static_cast<ads::mojom::PromotedContentAdEventType>(eventType));
 }
 
+- (void)reportSearchResultAdEvent:(NSString*)uuid
+               creativeInstanceId:(NSString*)creativeInstanceId
+                        eventType:(AdsSearchResultAdEventType)eventType {
+  if (![self isAdsServiceRunning]) {
+    return;
+  }
+  // TODO(tmancey): Refactor creativeInstanceId to use
+  // ads::mojom::SearchResultAdPtr
+  ads->OnSearchResultAdEvent(
+      base::SysNSStringToUTF8(uuid),
+      base::SysNSStringToUTF8(creativeInstanceId),
+      static_cast<ads::mojom::SearchResultAdEventType>(eventType));
+}
+
 - (void)purgeOrphanedAdEvents:(AdsAdType)adType {
   if (![self isAdsServiceRunning]) {
     return;

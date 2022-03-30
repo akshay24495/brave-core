@@ -26,6 +26,7 @@ class CreativeAds;
 class CreativeNewTabPageAdWallpapers;
 class Dayparts;
 class GeoTargets;
+class RedemptionValues;
 class Segments;
 
 class CreativeNewTabPageAds final : public Table {
@@ -86,6 +87,7 @@ class CreativeNewTabPageAds final : public Table {
       creative_new_tab_page_ad_wallpapers_database_table_;
   std::unique_ptr<Dayparts> dayparts_database_table_;
   std::unique_ptr<GeoTargets> geo_targets_database_table_;
+  std::unique_ptr<RedemptionValues> redemption_values_database_table_;
   std::unique_ptr<Segments> segments_database_table_;
 };
 

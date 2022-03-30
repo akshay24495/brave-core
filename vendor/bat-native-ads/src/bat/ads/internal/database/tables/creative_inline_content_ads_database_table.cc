@@ -24,6 +24,7 @@
 #include "bat/ads/internal/database/tables/creative_ads_database_table.h"
 #include "bat/ads/internal/database/tables/dayparts_database_table.h"
 #include "bat/ads/internal/database/tables/geo_targets_database_table.h"
+#include "bat/ads/internal/database/tables/redemption_values_database_table.h"
 #include "bat/ads/internal/database/tables/segments_database_table.h"
 #include "bat/ads/internal/logging.h"
 #include "bat/ads/internal/segments/segments_util.h"
@@ -181,6 +182,7 @@ void CreativeInlineContentAds::Save(
     dayparts_database_table_->InsertOrUpdate(transaction.get(), creative_ads);
     geo_targets_database_table_->InsertOrUpdate(transaction.get(),
                                                 creative_ads);
+    redemption_values_database_table_->InsertOrUpdate(transaction.get(), creative_ads);
     segments_database_table_->InsertOrUpdate(transaction.get(), creative_ads);
   }
 
