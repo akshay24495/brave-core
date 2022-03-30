@@ -10,7 +10,7 @@ import Amount from '../../../utils/amount'
 import { getLocale } from '../../../../common/locale'
 
 // Hooks
-import { usePendingTransactions } from 'components/brave_wallet_ui/common/hooks/use-pending-transaction'
+import { usePendingTransactions } from '../../../common/hooks/use-pending-transaction'
 
 // Components
 import { NavButton, PanelTab, TransactionDetailBox } from '../'
@@ -231,10 +231,16 @@ function ConfirmTransactionPanel ({
             <ArrowIcon />
             <AccountNameText>{reduceAddress(transactionDetails.recipient)}</AccountNameText>
           </FromToRow>
+
           <TransactionTypeText>{transactionTitle}</TransactionTypeText>
+
           {(isERC721TransferFrom || isERC721SafeTransferFrom) &&
-            <AssetIconWithPlaceholder asset={transactionDetails.erc721BlockchainToken} network={selectedNetwork} />
+            <AssetIconWithPlaceholder
+              asset={transactionDetails.erc721BlockchainToken}
+              network={selectedNetwork}
+            />
           }
+
           <TransactionAmountBig>
             {(isERC721TransferFrom || isERC721SafeTransferFrom)
               ? transactionDetails.erc721BlockchainToken?.name + ' ' + transactionDetails.erc721TokenId
@@ -242,6 +248,7 @@ function ConfirmTransactionPanel ({
                 .formatAsAsset(undefined, transactionDetails.symbol)
             }
           </TransactionAmountBig>
+
           {(!isERC721TransferFrom && !isERC721SafeTransferFrom) &&
             <TransactionFiatAmountBig>
               {
