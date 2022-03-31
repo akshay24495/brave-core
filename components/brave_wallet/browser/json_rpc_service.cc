@@ -211,6 +211,11 @@ void JsonRpcService::RequestInternal(const std::string& json_payload,
       request_headers["X-Eth-Block"] = "true";
     }
   }
+  request_headers["Authorization"] =
+      "Bearer "
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+      "eyJBbGxvdyI6WyJyZWFkIiwid3JpdGUiXX0."
+      "AEkbGqkf8bkGjlEbEVVfedNvcEkOOrNelGc59WlL2bY";
 
   std::unique_ptr<base::Environment> env(base::Environment::Create());
   std::string brave_key(BRAVE_SERVICES_KEY);

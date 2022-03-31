@@ -237,7 +237,7 @@ export default function useSend (
         from: selectedAccount.address,
         to: toAddress,
         value: new Amount(sendAmount)
-          .multiplyByDecimals(selectedSendAsset.decimals).toString(),
+        .multiplyByDecimals(selectedSendAsset.decimals).toNumber().toString(),
         coin: selectedAccount.coin
       } as SendFilTransactionParams)
     }

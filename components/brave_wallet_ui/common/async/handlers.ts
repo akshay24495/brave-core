@@ -85,7 +85,7 @@ async function refreshWalletInfo (store: Store) {
       BraveWallet.ExternalWalletType.MetaMask)
   store.dispatch(WalletActions.setMetaMaskInstalled(mmResult.installed))
 
-  await store.dispatch(refreshTransactionHistory(BraveWallet.CoinType.ETH))
+  await store.dispatch(refreshTransactionHistory(BraveWallet.CoinType.FIL))
   await store.dispatch(refreshSitePermissions())
 }
 
@@ -247,7 +247,8 @@ handler.on(WalletActions.initialized.getType(), async (store: Store, payload: Wa
 
   // This can be 0 when the wallet is locked
   if (payload.selectedAccount) {
-    await store.dispatch(refreshTransactionHistory(BraveWallet.CoinType.ETH, payload.selectedAccount))
+    console.log(payload)
+    await store.dispatch(refreshTransactionHistory(BraveWallet.CoinType.FIL, payload.selectedAccount))
   }
 })
 

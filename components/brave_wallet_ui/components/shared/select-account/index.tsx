@@ -17,8 +17,7 @@ function SelectAccount (props: Props) {
   // https://github.com/brave/brave-browser/issues/20893
   const accountsList = React.useMemo(() => {
     return accounts.filter((account) =>
-      account.coin !== BraveWallet.CoinType.SOL &&
-      account.coin !== BraveWallet.CoinType.FIL)
+      account.coin !== BraveWallet.CoinType.SOL)
   }, [accounts])
 
   return (

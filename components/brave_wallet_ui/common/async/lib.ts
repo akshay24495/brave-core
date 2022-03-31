@@ -523,7 +523,7 @@ export function refreshKeyringInfo () {
         walletInfo.selectedAccount = selectedAddress
       }
     }
-
+    console.log(walletInfo)
     dispatch(WalletActions.initialized(walletInfo))
   }
 }
@@ -653,6 +653,7 @@ export async function sendFilTransaction (payload: SendFilTransactionParams) {
     from: payload.from,
     value: payload.value,
   }
+  console.log(payload)
   // @ts-expect-error google closure is ok with undefined for other fields but mojom runtime is not
   return await apiProxy.txService.addUnapprovedTransaction({ filTxData: filTxData }, payload.from)
 }

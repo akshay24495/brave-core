@@ -73,6 +73,7 @@ bool ParseFilEstimateGas(const std::string& raw_json,
 }
 
 bool ParseSendFilecoinTransaction(const std::string& json, std::string* cid) {
+  DLOG(INFO) << "json:" << json;
   base::Value result;
   if (!cid || !ParseResult(json, &result))
     return false;
