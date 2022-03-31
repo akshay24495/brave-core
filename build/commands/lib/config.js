@@ -548,7 +548,7 @@ Config.prototype.buildArgs = function () {
       args.use_goma = true
       args.goma_dir = path.join(this.outputDir, 'redirect_cc')
     } else {
-      args.cc_wrapper = path.join(this.outputDir, 'redirect_cc', 'redirect_cc')
+      // args.cc_wrapper = path.join(this.outputDir, 'redirect_cc', 'redirect_cc')
     }
   } else if (process.platform === 'win32') {
     args.cc_wrapper = path.join(this.srcDir, 'brave', 'buildtools', 'win', 'redirect-cc', 'bin', 'redirect-cc.exe')
